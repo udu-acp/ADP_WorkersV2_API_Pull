@@ -4,9 +4,11 @@ import os
 
 # Set token request body variables
 grant_type = 'client_credentials'
-client_id = os.getenv("EpochSL_Client_ID")
-client_secret = os.getenv("EpochSL_Client_Secret")
-bearer_token = ""
+# client_id = "b844b1f3-09d6-4b37-a9f2-e2395e562799"
+# client_secret = "5c3e3573-1cd9-4a33-af72-387fa0102774"
+client_id = os.getenv('EPOCHSL_CLIENT_ID')
+client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
+
 
 # Set SSL Client Certificates
 cert_path = "C:/Users/JoshuaUdume/companyname_auth.pem"
@@ -26,12 +28,11 @@ pl = {
     'content-type': content_type
 }
 
-# POST the request and parse the response
-# resp = requests.post(url, data=pl, cert=(cert_path, key_path))
-# j = json.loads(resp.text)
+# store the bearer token from the response
+resp = requests.post(url, data=pl, cert=(cert_path, key_path))
+j = json.loads(resp.text)
+bearer_token = j["access_token"]
 
 # Save the Bearer Token as a variable
+print(j["access_token"])
 
-# context.updateVariable('adp_access_token', j['access_token'])
-
-print(client_id)
