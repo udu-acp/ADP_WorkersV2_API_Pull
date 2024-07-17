@@ -5,6 +5,20 @@ import pandas as pd
 from azure.storage.blob import BlobServiceClient, ContentSettings
 import io
 
+# *keys: allows the function to accept any number of keys as separate args
+# eg. statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
+def safe_get(data, *keys, default=""):
+    # drill down through keys in data
+    for key in keys:
+        # if dictionary, go deeper
+        if isinstance(data, dict):
+            # if key exists, update data
+            data = data.get(key, {})
+        else:
+            return default
+    return data if data not in ({}, None) else default
+
+
 # Set token request body variables
 grant_type = 'client_credentials'
 client_id = os.getenv('EPOCHSL_CLIENT_ID')
@@ -60,84 +74,59 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # update loop variable for testing
   # loop += 1
 
+# create lists to append to
+associateIDs, workerIDs, hiredates, termdates, statuses, departments = [], [], [], [], [], [], []
+
+# test lists with sensative info
+last_names, first_names, full_names = [], [], []
+
+# loop through all elements in the workers API response and add to individual lists
+for worker in data_dict:
+    associateIDs.append(safe_get(worker, "associateOID"))
+    workerIDs.append(safe_get(worker, "workerID", "idValue"))
+    
+    # assignments
+    work_assignment = safe_get(worker, "workAssignments", default=[{}])[-1]
+    # print(work_assignment)
+    # print("****")
+    hiredates.append(safe_get(work_assignment, "hireDate"))
+    termdates.append(safe_get(work_assignment, "terminationDate"))
+    statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
+    
+    # departments
+    # assignedOrganizationalUnits is a list of dicts
+    org_units = safe_get(work_assignment, "assignedOrganizationalUnits", default=[])
+    department = ""
+    # iterate through org_units
+    for unit in org_units:
+        # if typeCode is Department, get shortName
+        if safe_get(unit, "typeCode", "shortName") == 'Department':
+            # get shortName from nameCode
+            department = safe_get(unit, "nameCode", "shortName")
+            # if department found
+            break
+    # append department
+    departments.append(department)
+    
+    # info
+    legal_name = safe_get(worker, "person", "legalName", default={})
+    first_names.append(safe_get(legal_name, "givenName"))
+    last_names.append(safe_get(legal_name, "familyName1"))
+    full_names.append(safe_get(legal_name, "formattedName"))
 
 # create empty df to hold data
 df = pd.DataFrame()
 
-# create lists to append to
-associateIDs = []
-workerID = []
-hiredates = []
-termdates = []
-status = []
-department = []
-last_name = []
-first_name = []
-full_name = []
-
-# loop through all elements in the workers API response and add to individual lists
-for n in range(0, len(data_dict)):
-  try:
-    associateIDs.append(data_dict[n]["associateOID"])
-  except Exception as e:
-    associateIDs.append("") # Set to NULL in Matillion DPC
-    
-  try:
-    workerID.append(data_dict[n]["workerID"]["idValue"])
-  except Exception as e:
-    workerID.append("")
-   
-  # grab the last "workAssignments" list entry to account for transfers
-  try:
-    hiredates.append(data_dict[n]["workAssignments"][-1]["hireDate"])
-  except Exception as e:
-    hiredates.append("")
-    
-  try:
-    termdates.append(data_dict[n]["workAssignments"][-1]["terminationDate"])
-  except Exception as e:
-    termdates.append("")
-    
-  try:
-    status.append(data_dict[n]["workAssignments"][-1]["assignmentStatus"]["statusCode"]["longName"])
-  except Exception as e:
-    status.append("")
-    
-  # the department value can be in two locations and some records don't have both options, so this trys for either if they are available
-  try:
-    if data_dict[n]["workAssignments"][-1]["assignedOrganizationalUnits"][0]["typeCode"]["shortName"] == 'Department':
-      department.append(data_dict[n]["workAssignments"][-1]["assignedOrganizationalUnits"][0]["nameCode"]["shortName"])
-    elif data_dict[n]["workAssignments"][-1]["assignedOrganizationalUnits"][1]["typeCode"]["shortName"] == 'Department':
-      department.append(data_dict[n]["workAssignments"][-1]["assignedOrganizationalUnits"][1]["nameCode"]["shortName"])
-  except Exception as e:
-    department.append("")
-  
-  try:
-    first_name.append(data_dict[n]["person"]["legalName"]["givenName"])
-  except Exception as e:
-    status.append("")
-  
-  try:
-    last_name.append(data_dict[n]["person"]["legalName"]["familyName1"])
-  except Exception as e:
-    status.append("")
-  
-  try:
-    full_name.append(data_dict[n]["person"]["legalName"]["formattedName"])
-  except Exception as e:
-    status.append("")
-    
-
 # turn lists into columns of dataframe
 df["associate0ID"] = associateIDs
-df["workerID"] = workerID
+df["workerID"] = workerIDs
 df['hire_date'] = hiredates
 df['term_date'] = termdates
-df['status'] = status
+df['status'] = statuses
 df['department'] = department
-df['first_name'] = first_name
-df['last_name'] = last_name
-df['full_name'] = full_name
+df['first_name'] = first_names
+df['last_name'] = last_names
+df['full_name'] = full_names
 
 
 # convert df to string
