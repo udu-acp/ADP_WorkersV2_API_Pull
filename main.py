@@ -1,6 +1,9 @@
 import requests
 import json
 import os
+import pandas as pd
+from azure.storage.blob import BlobServiceClient, ContentSettings
+import io
 
 # Set token request body variables
 grant_type = 'client_credentials'
@@ -14,7 +17,7 @@ client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
 cert_path = "C:/Users/JoshuaUdume/companyname_auth.pem"
 key_path = "C:/Users/JoshuaUdume/companyname_auth.key"
 
-# Set Headers
+# Set POST Headers
 content_type = 'application/x-www-form-urlencoded'
 
 # The URL for all ADP token services
@@ -33,6 +36,12 @@ resp = requests.post(url, data=pl, cert=(cert_path, key_path))
 j = json.loads(resp.text)
 bearer_token = j["access_token"]
 
-# Save the Bearer Token as a variable
-print(j["access_token"])
+# Set GET Headers
+headers = {"Authorization": f"Bearer {bearer_token}"}
 
+# Set WorkersV2 URI Variables
+endpoint = "https://api.adp.com/hr/v2/workers?$top=100&$skip="
+skips = 0
+URI = "{0}{1}".format(endpoint,skips)
+
+print(URI)
