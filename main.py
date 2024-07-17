@@ -7,8 +7,6 @@ import io
 
 # Set token request body variables
 grant_type = 'client_credentials'
-# client_id = "b844b1f3-09d6-4b37-a9f2-e2395e562799"
-# client_secret = "5c3e3573-1cd9-4a33-af72-387fa0102774"
 client_id = os.getenv('EPOCHSL_CLIENT_ID')
 client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
 
