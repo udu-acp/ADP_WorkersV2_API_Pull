@@ -56,7 +56,7 @@ bearer_token = j["access_token"]
 headers = {"Authorization": f"Bearer {bearer_token}"}
 
 # Set WorkersV2 URI Variables
-endpoint = "https://api.adp.com/hr/v2/workers?$top=100&$skip="
+endpoint = "https://api.adp.com/hr/v2/workers?$top=20&$skip="
 skips = 0
 URI = "{0}{1}".format(endpoint,skips)
 
@@ -84,14 +84,14 @@ last_names, first_names, full_names = [], [], []
 for worker in data_dict:
     associateIDs.append(safe_get(worker, "associateOID"))
     workerIDs.append(safe_get(worker, "workerID", "idValue"))
+    hiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
+    statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
+    termdates.append(safe_get(worker, "workerDates", "terminationDate"))
     
     # assignments
     work_assignment = safe_get(worker, "workAssignments", default=[{}])[-1]
     # print(work_assignment)
     # print("****")
-    hiredates.append(safe_get(work_assignment, "hireDate"))
-    termdates.append(safe_get(work_assignment, "terminationDate"))
-    statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
     
     # departments
     # assignedOrganizationalUnits is a list of dicts
@@ -121,6 +121,7 @@ df = pd.DataFrame({
    'hire_date': hiredates,
    'term_date': termdates,
    'department': department,
+   'status': statuses,
    'first_name': first_names,
    'last_name': last_names,
    'full_name': full_names
@@ -130,24 +131,26 @@ df = pd.DataFrame({
 # convert df to string
 output = df.to_csv(index=False, encoding="utf-8")
 
-# connect to azure blob storage
-account_name = "epochmatillion"
-account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
-container_name = "adp"
-blob_name = "APIs/WorkersV2.csv"
-account_url = "https://epochmatillion.blob.core.windows.net"
+print(output)
+
+# # connect to azure blob storage
+# account_name = "epochmatillion"
+# account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
+# container_name = "adp"
+# blob_name = "APIs/WorkersV2.csv"
+# account_url = "https://epochmatillion.blob.core.windows.net"
 
 
-# Create the BlobServiceClient objects, access contianer, blob, and then upload blob
-blob_service = BlobServiceClient(account_url, credential=account_key)
-container_client = blob_service.get_container_client(container_name)
-blob_client = blob_service.get_blob_client(container=container_name, blob=blob_name)
-job_status = ""
-try:
-  blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
-  job_status = "success"
-except:
-  job_status = "failed"
+# # Create the BlobServiceClient objects, access contianer, blob, and then upload blob
+# blob_service = BlobServiceClient(account_url, credential=account_key)
+# container_client = blob_service.get_container_client(container_name)
+# blob_client = blob_service.get_blob_client(container=container_name, blob=blob_name)
+# job_status = ""
+# try:
+#   blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
+#   job_status = "success"
+# except:
+#   job_status = "failed"
 
 # ## Matillion Varible Logic
 # # context.updateVariable("blob_upload_status", job_status)
