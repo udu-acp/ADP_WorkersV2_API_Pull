@@ -3,7 +3,6 @@ import json
 import os
 import pandas as pd
 from azure.storage.blob import BlobServiceClient, ContentSettings
-import io
 
 # *keys: allows the function to accept any number of keys as separate args
 # eg. statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
@@ -26,8 +25,8 @@ client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
 
 
 # Set SSL Client Certificates
-cert_path = "C:/Users/JoshuaUdume/companyname_auth.pem"
-key_path = "C:/Users/JoshuaUdume/companyname_auth.key"
+cert_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.pem"
+key_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.key"
 
 # Set POST Headers
 content_type = 'application/x-www-form-urlencoded'
@@ -56,7 +55,7 @@ bearer_token = j["access_token"]
 headers = {"Authorization": f"Bearer {bearer_token}"}
 
 # Set WorkersV2 URI Variables
-endpoint = "https://api.adp.com/hr/v2/workers?$top=20&$skip="
+endpoint = "https://api.adp.com/hr/v2/workers?$top=100&$skip="
 skips = 0
 URI = "{0}{1}".format(endpoint,skips)
 
@@ -89,26 +88,25 @@ for worker in data_dict:
     termdates.append(safe_get(worker, "workerDates", "terminationDate"))
     
     # assignments
-    work_assignment = safe_get(worker, "workAssignments", default=[{}])[-1]
-    # print(work_assignment)
-    # print("****")
+    work_assignment = safe_get(worker, "workAssignments", default=[{}])
+
+    # loop though each item in the work_assignment list
+    for item in work_assignment:
+        # find the active list item in work_assignment
+        if safe_get(item, "primaryIndicator") == True:
+            # assignedOrganizationalUnits is a list of dicts
+            org_units = safe_get(item, "assignedOrganizationalUnits", default=[])
+            # iterate through org_units
+            for unit in org_units:
+                # if typeCode is Department, get shortName
+                if safe_get(unit, "typeCode", "shortName") == 'Department':
+                    # get shortName from nameCode
+                    department = safe_get(unit, "nameCode", "shortName")
+                    # if department found
+                    break
+            departments.append(department)
     
-    # departments
-    # assignedOrganizationalUnits is a list of dicts
-    org_units = safe_get(work_assignment, "assignedOrganizationalUnits", default=[])
-    department = ""
-    # iterate through org_units
-    for unit in org_units:
-        # if typeCode is Department, get shortName
-        if safe_get(unit, "typeCode", "shortName") == 'Department':
-            # get shortName from nameCode
-            department = safe_get(unit, "nameCode", "shortName")
-            # if department found
-            break
-    # append department
-    departments.append(department)
-    
-    # info
+    # info for QA
     legal_name = safe_get(worker, "person", "legalName", default={})
     first_names.append(safe_get(legal_name, "givenName"))
     last_names.append(safe_get(legal_name, "familyName1"))
@@ -120,7 +118,7 @@ df = pd.DataFrame({
    'workerID': workerIDs,
    'hire_date': hiredates,
    'term_date': termdates,
-   'department': department,
+   'department': departments,
    'status': statuses,
    'first_name': first_names,
    'last_name': last_names,
@@ -131,26 +129,27 @@ df = pd.DataFrame({
 # convert df to string
 output = df.to_csv(index=False, encoding="utf-8")
 
-print(output)
 
-# # connect to azure blob storage
-# account_name = "epochmatillion"
-# account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
-# container_name = "adp"
-# blob_name = "APIs/WorkersV2.csv"
-# account_url = "https://epochmatillion.blob.core.windows.net"
+# connect to azure blob storage
+account_name = "epochmatillion"
+account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
+container_name = "adp"
+blob_name = "APIs/WorkersV2.csv"
+account_url = "https://epochmatillion.blob.core.windows.net"
 
 
-# # Create the BlobServiceClient objects, access contianer, blob, and then upload blob
-# blob_service = BlobServiceClient(account_url, credential=account_key)
-# container_client = blob_service.get_container_client(container_name)
-# blob_client = blob_service.get_blob_client(container=container_name, blob=blob_name)
-# job_status = ""
-# try:
-#   blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
-#   job_status = "success"
-# except:
-#   job_status = "failed"
+# Create the BlobServiceClient objects, access contianer, blob, and then upload blob
+blob_service = BlobServiceClient(account_url, credential=account_key)
+container_client = blob_service.get_container_client(container_name)
+blob_client = blob_service.get_blob_client(container=container_name, blob=blob_name)
+job_status = ""
+try:
+  blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
+  job_status = "success"
+except:
+  job_status = "failed"
 
-# ## Matillion Varible Logic
-# # context.updateVariable("blob_upload_status", job_status)
+print(job_status)
+
+## Matillion Varible Logic
+# context.updateVariable("blob_upload_status", job_status)
