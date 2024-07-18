@@ -75,7 +75,7 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # loop += 1
 
 # create lists to append to
-associateIDs, workerIDs, hiredates, termdates, statuses, departments = [], [], [], [], [], [], []
+associateIDs, workerIDs, hiredates, termdates, statuses, departments = [], [], [], [], [], []
 
 # test lists with sensative info
 last_names, first_names, full_names = [], [], []
@@ -114,19 +114,17 @@ for worker in data_dict:
     last_names.append(safe_get(legal_name, "familyName1"))
     full_names.append(safe_get(legal_name, "formattedName"))
 
-# create empty df to hold data
-df = pd.DataFrame()
-
-# turn lists into columns of dataframe
-df["associate0ID"] = associateIDs
-df["workerID"] = workerIDs
-df['hire_date'] = hiredates
-df['term_date'] = termdates
-df['status'] = statuses
-df['department'] = department
-df['first_name'] = first_names
-df['last_name'] = last_names
-df['full_name'] = full_names
+# convert lists into columns in dataframe
+df = pd.DataFrame({
+   'associate0ID': associateIDs,
+   'workerID': workerIDs,
+   'hire_date': hiredates,
+   'term_date': termdates,
+   'department': department,
+   'first_name': first_names,
+   'last_name': last_names,
+   'full_name': full_names
+})
 
 
 # convert df to string
@@ -151,5 +149,5 @@ try:
 except:
   job_status = "failed"
 
-## Matillion Varible Logic
-# context.updateVariable("blob_upload_status", job_status)
+# ## Matillion Varible Logic
+# # context.updateVariable("blob_upload_status", job_status)
