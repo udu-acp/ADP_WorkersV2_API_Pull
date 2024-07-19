@@ -74,7 +74,7 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # loop += 1
 
 # create lists to append to
-associateIDs, workerIDs, hiredates, termdates, statuses, departments = [], [], [], [], [], []
+associateIDs, workerIDs, hiredates, termdates, statuses, effectivedates, departments = [], [], [], [], [], [], []
 
 # test lists with sensative info
 last_names, first_names, full_names = [], [], []
@@ -84,7 +84,8 @@ for worker in data_dict:
     associateIDs.append(safe_get(worker, "associateOID"))
     workerIDs.append(safe_get(worker, "workerID", "idValue"))
     hiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
-    statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
+    ## the status at this location can return "Inactive" when it should return "Leave" or "Terminated"
+    # statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
     termdates.append(safe_get(worker, "workerDates", "terminationDate"))
     
     # assignments
@@ -94,6 +95,12 @@ for worker in data_dict:
     for item in work_assignment:
         # find the active list item in work_assignment
         if safe_get(item, "primaryIndicator") == True:
+            # grab status
+            statuses.append(safe_get(item, "assignmentStatus", "statusCode", "longName"))
+            # grab effective date of status
+            effectivedates.append(safe_get(item, "assignmentStatus", "effectiveDate"))
+
+            # grab department
             # assignedOrganizationalUnits is a list of dicts
             org_units = safe_get(item, "assignedOrganizationalUnits", default=[])
             # iterate through org_units
@@ -116,10 +123,11 @@ for worker in data_dict:
 df = pd.DataFrame({
    'associate0ID': associateIDs,
    'workerID': workerIDs,
+   'department': departments,
    'hire_date': hiredates,
    'term_date': termdates,
-   'department': departments,
    'status': statuses,
+   'effective_date': effectivedates,
    'first_name': first_names,
    'last_name': last_names,
    'full_name': full_names
@@ -128,7 +136,7 @@ df = pd.DataFrame({
 
 # convert df to string
 output = df.to_csv(index=False, encoding="utf-8")
-
+# print(output)
 
 # connect to azure blob storage
 account_name = "epochmatillion"
@@ -146,7 +154,7 @@ job_status = ""
 try:
   blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
   job_status = "success"
-except:
+except Exception as e:
   job_status = "failed"
 
 print(job_status)
