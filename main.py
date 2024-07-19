@@ -3,7 +3,6 @@ import json
 import os
 import pandas as pd
 from azure.storage.blob import BlobServiceClient, ContentSettings
-import io
 
 # *keys: allows the function to accept any number of keys as separate args
 # eg. statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
@@ -26,8 +25,8 @@ client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
 
 
 # Set SSL Client Certificates
-cert_path = "C:/Users/JoshuaUdume/companyname_auth.pem"
-key_path = "C:/Users/JoshuaUdume/companyname_auth.key"
+cert_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.pem"
+key_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.key"
 
 # Set POST Headers
 content_type = 'application/x-www-form-urlencoded'
@@ -75,7 +74,7 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # loop += 1
 
 # create lists to append to
-associateIDs, workerIDs, hiredates, termdates, statuses, departments = [], [], [], [], [], [], []
+associateIDs, workerIDs, hiredates, termdates, statuses, effectivedates, departments = [], [], [], [], [], [], []
 
 # test lists with sensative info
 last_names, first_names, full_names = [], [], []
@@ -84,53 +83,60 @@ last_names, first_names, full_names = [], [], []
 for worker in data_dict:
     associateIDs.append(safe_get(worker, "associateOID"))
     workerIDs.append(safe_get(worker, "workerID", "idValue"))
+    hiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
+    ## the status at this location can return "Inactive" when it should return "Leave" or "Terminated"
+    # statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
+    termdates.append(safe_get(worker, "workerDates", "terminationDate"))
     
     # assignments
-    work_assignment = safe_get(worker, "workAssignments", default=[{}])[-1]
-    # print(work_assignment)
-    # print("****")
-    hiredates.append(safe_get(work_assignment, "hireDate"))
-    termdates.append(safe_get(work_assignment, "terminationDate"))
-    statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
+    work_assignment = safe_get(worker, "workAssignments", default=[{}])
+
+    # loop though each item in the work_assignment list
+    for item in work_assignment:
+        # find the active list item in work_assignment
+        if safe_get(item, "primaryIndicator") == True:
+            # grab status
+            statuses.append(safe_get(item, "assignmentStatus", "statusCode", "longName"))
+            # grab effective date of status
+            effectivedates.append(safe_get(item, "assignmentStatus", "effectiveDate"))
+
+            # grab department
+            # assignedOrganizationalUnits is a list of dicts
+            org_units = safe_get(item, "assignedOrganizationalUnits", default=[])
+            # iterate through org_units
+            for unit in org_units:
+                # if typeCode is Department, get shortName
+                if safe_get(unit, "typeCode", "shortName") == 'Department':
+                    # get shortName from nameCode
+                    department = safe_get(unit, "nameCode", "shortName")
+                    # if department found
+                    break
+            departments.append(department)
     
-    # departments
-    # assignedOrganizationalUnits is a list of dicts
-    org_units = safe_get(work_assignment, "assignedOrganizationalUnits", default=[])
-    department = ""
-    # iterate through org_units
-    for unit in org_units:
-        # if typeCode is Department, get shortName
-        if safe_get(unit, "typeCode", "shortName") == 'Department':
-            # get shortName from nameCode
-            department = safe_get(unit, "nameCode", "shortName")
-            # if department found
-            break
-    # append department
-    departments.append(department)
-    
-    # info
+    # info for QA
     legal_name = safe_get(worker, "person", "legalName", default={})
     first_names.append(safe_get(legal_name, "givenName"))
     last_names.append(safe_get(legal_name, "familyName1"))
     full_names.append(safe_get(legal_name, "formattedName"))
 
-# create empty df to hold data
-df = pd.DataFrame()
-
-# turn lists into columns of dataframe
-df["associate0ID"] = associateIDs
-df["workerID"] = workerIDs
-df['hire_date'] = hiredates
-df['term_date'] = termdates
-df['status'] = statuses
-df['department'] = department
-df['first_name'] = first_names
-df['last_name'] = last_names
-df['full_name'] = full_names
+# convert lists into columns in dataframe
+df = pd.DataFrame({
+   'associate0ID': associateIDs,
+   'workerID': workerIDs,
+   'department': departments,
+   'hire_date': hiredates,
+   'term_date': termdates,
+   'status': statuses,
+   'effective_date': effectivedates,
+   'first_name': first_names,
+   'last_name': last_names,
+   'full_name': full_names
+})
 
 
 # convert df to string
 output = df.to_csv(index=False, encoding="utf-8")
+# print(output)
 
 # connect to azure blob storage
 account_name = "epochmatillion"
@@ -148,8 +154,10 @@ job_status = ""
 try:
   blob_client.upload_blob(output, overwrite=True, content_settings=ContentSettings(content_type="text/csv"))
   job_status = "success"
-except:
+except Exception as e:
   job_status = "failed"
+
+print(job_status)
 
 ## Matillion Varible Logic
 # context.updateVariable("blob_upload_status", job_status)
