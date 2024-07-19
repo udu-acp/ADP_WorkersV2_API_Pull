@@ -74,7 +74,8 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # loop += 1
 
 # create lists to append to
-associateIDs, workerIDs, hiredates, termdates, statuses, effectivedates, departments = [], [], [], [], [], [], []
+associateIDs, workerIDs, originalhiredates, rehiredates = [], [], [], []
+termdates, statuses, effectivedates, departments = [], [], [], []
 
 # test lists with sensative info
 last_names, first_names, full_names = [], [], []
@@ -83,7 +84,7 @@ last_names, first_names, full_names = [], [], []
 for worker in data_dict:
     associateIDs.append(safe_get(worker, "associateOID"))
     workerIDs.append(safe_get(worker, "workerID", "idValue"))
-    hiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
+    originalhiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
     ## the status at this location can return "Inactive" when it should return "Leave" or "Terminated"
     # statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
     termdates.append(safe_get(worker, "workerDates", "terminationDate"))
@@ -95,6 +96,8 @@ for worker in data_dict:
     for item in work_assignment:
         # find the active list item in work_assignment
         if safe_get(item, "primaryIndicator") == True:
+            # grab rehire date (it will be original hire date, if they haven't switched assignments)
+            rehiredates.append(safe_get(item, "hireDate"))
             # grab status
             statuses.append(safe_get(item, "assignmentStatus", "statusCode", "longName"))
             # grab effective date of status
@@ -124,7 +127,8 @@ df = pd.DataFrame({
    'associate0ID': associateIDs,
    'workerID': workerIDs,
    'department': departments,
-   'hire_date': hiredates,
+   'hire_date': originalhiredates,
+   'rehire_date': rehiredates,
    'term_date': termdates,
    'status': statuses,
    'effective_date': effectivedates,
