@@ -77,8 +77,8 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
 associateIDs, workerIDs, originalhiredates, rehiredates = [], [], [], []
 termdates, statuses, effectivedates, departments = [], [], [], []
 
-# test lists with sensative info
-last_names, first_names, full_names = [], [], []
+# # test lists with sensative info
+# last_names, first_names, full_names = [], [], []
 
 # loop through all elements in the workers API response and add to individual lists
 for worker in data_dict:
@@ -116,11 +116,11 @@ for worker in data_dict:
                     break
             departments.append(department)
     
-    # info for QA
-    legal_name = safe_get(worker, "person", "legalName", default={})
-    first_names.append(safe_get(legal_name, "givenName"))
-    last_names.append(safe_get(legal_name, "familyName1"))
-    full_names.append(safe_get(legal_name, "formattedName"))
+    # # info for QA
+    # legal_name = safe_get(worker, "person", "legalName", default={})
+    # first_names.append(safe_get(legal_name, "givenName"))
+    # last_names.append(safe_get(legal_name, "familyName1"))
+    # full_names.append(safe_get(legal_name, "formattedName"))
 
 # convert lists into columns in dataframe
 df = pd.DataFrame({
@@ -132,9 +132,9 @@ df = pd.DataFrame({
    'term_date': termdates,
    'status': statuses,
    'effective_date': effectivedates,
-   'first_name': first_names,
-   'last_name': last_names,
-   'full_name': full_names
+#    'first_name': first_names,
+#    'last_name': last_names,
+#    'full_name': full_names
 })
 
 
