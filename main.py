@@ -74,47 +74,65 @@ while requests.get(URI, headers=headers, cert=(cert_path, key_path)).status_code
   # loop += 1
 
 # create lists to append to
-associateIDs, workerIDs, originalhiredates, rehiredates = [], [], [], []
-termdates, statuses, effectivedates, departments = [], [], [], []
+associateIDs, workerIDs, originalhiredates = [], [], []
+termdates, statuses, statuseffectivedates, departments = [], [], [], []
+assignmenthiredates, assignmentstartdates, assignmenttermdates, assignmentstatusreasons = [], [], [], []
+primaryindicators = []
 
 # # test lists with sensative info
 # last_names, first_names, full_names = [], [], []
 
 # loop through all elements in the workers API response and add to individual lists
 for worker in data_dict:
-    associateIDs.append(safe_get(worker, "associateOID"))
-    workerIDs.append(safe_get(worker, "workerID", "idValue"))
-    originalhiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
-    ## the status at this location can return "Inactive" when it should return "Leave" or "Terminated"
-    # statuses.append(safe_get(worker, "workerStatus", "statusCode", "codeValue"))
-    termdates.append(safe_get(worker, "workerDates", "terminationDate"))
-    
     # assignments
     work_assignment = safe_get(worker, "workAssignments", default=[{}])
-
-    # loop though each item in the work_assignment list
+    # loop through potential workAssignment list and create a complete record for each workAssignment
     for item in work_assignment:
-        # find the active list item in work_assignment
-        if safe_get(item, "primaryIndicator") == True:
-            # grab rehire date (it will be original hire date, if they haven't switched assignments)
-            rehiredates.append(safe_get(item, "hireDate"))
-            # grab status
-            statuses.append(safe_get(item, "assignmentStatus", "statusCode", "longName"))
-            # grab effective date of status
-            effectivedates.append(safe_get(item, "assignmentStatus", "effectiveDate"))
+        associateIDs.append(safe_get(worker, "associateOID"))
+        workerIDs.append(safe_get(worker, "workerID", "idValue"))
+        originalhiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
+        termdates.append(safe_get(worker, "workerDates", "terminationDate"))
+        
+        # # assignments
+        # work_assignment = safe_get(worker, "workAssignments", default=[{}])
+        # print(work_assignment)
 
-            # grab department
-            # assignedOrganizationalUnits is a list of dicts
-            org_units = safe_get(item, "assignedOrganizationalUnits", default=[])
-            # iterate through org_units
-            for unit in org_units:
-                # if typeCode is Department, get shortName
-                if safe_get(unit, "typeCode", "shortName") == 'Department':
+        # grab assignment specific data
+        # grab assignment hire date (it will be original hire date, if they haven't switched assignments)
+        assignmenthiredates.append(safe_get(item, "hireDate"))
+        assignmentstartdates.append(safe_get(item, "actualStartDate"))
+        assignmenttermdates.append(safe_get(item, "terminationDate"))
+
+        # grab shortname, longname, or set to ""
+        if safe_get(item, "assignmentStatus", "reasonCode", "shortName"):
+            assignmentstatusreasons.append(safe_get(item, "assignmentStatus", "reasonCode", "shortName"))
+        elif safe_get(item, "assignmentStatus", "reasonCode", "longName"):
+            assignmentstatusreasons.append(safe_get(item, "assignmentStatus", "reasonCode", "longName"))
+        else:
+            assignmentstatusreasons.append("")
+
+        statuses.append(safe_get(item, "assignmentStatus", "statusCode", "longName"))
+        statuseffectivedates.append(safe_get(item, "assignmentStatus", "effectiveDate"))
+        primaryindicators.append(safe_get(item, "primaryIndicator"))
+
+        # grab department
+        # assignedOrganizationalUnits is a list of dicts
+        org_units = safe_get(item, "assignedOrganizationalUnits", default=[])
+        # iterate through org_units
+        for unit in org_units:
+            # if typeCode is Department, get shortName
+            if safe_get(unit, "typeCode", "shortName") == 'Department':
+                if safe_get(unit, "nameCode", "shortName"):
                     # get shortName from nameCode
                     department = safe_get(unit, "nameCode", "shortName")
                     # if department found
                     break
-            departments.append(department)
+                elif safe_get(unit, "nameCode", "longName"):
+                    # get longName from nameCode
+                    department = safe_get(unit, "nameCode", "longName")
+                    # if department found
+                    break
+        departments.append(department)
     
     # # info for QA
     # legal_name = safe_get(worker, "person", "legalName", default={})
@@ -126,12 +144,16 @@ for worker in data_dict:
 df = pd.DataFrame({
    'associate0ID': associateIDs,
    'workerID': workerIDs,
-   'department': departments,
    'hire_date': originalhiredates,
-   'rehire_date': rehiredates,
    'term_date': termdates,
+   'department': departments,
+   'assignment_hire_date': assignmenthiredates,
+   'assignment_start_date': assignmentstartdates,
+   'assignment_term_date':assignmenttermdates,
+   'assignment_status_reason': assignmentstatusreasons,
    'status': statuses,
-   'effective_date': effectivedates,
+   'status_effective_date': statuseffectivedates,
+   'is_primary_record': primaryindicators,
 #    'first_name': first_names,
 #    'last_name': last_names,
 #    'full_name': full_names
