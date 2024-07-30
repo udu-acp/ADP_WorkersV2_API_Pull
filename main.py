@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 from azure.storage.blob import BlobServiceClient, ContentSettings
+from dotenv import load_dotenv
 
 # *keys: allows the function to accept any number of keys as separate args
 # eg. statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
@@ -17,6 +18,9 @@ def safe_get(data, *keys, default=""):
             return default
     return data if data not in ({}, None) else default
 
+
+# pull in environment variables
+load_dotenv()
 
 # Set token request body variables
 grant_type = 'client_credentials'
@@ -92,10 +96,6 @@ for worker in data_dict:
         workerIDs.append(safe_get(worker, "workerID", "idValue"))
         originalhiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
         termdates.append(safe_get(worker, "workerDates", "terminationDate"))
-        
-        # # assignments
-        # work_assignment = safe_get(worker, "workAssignments", default=[{}])
-        # print(work_assignment)
 
         # grab assignment specific data
         # grab assignment hire date (it will be original hire date, if they haven't switched assignments)
