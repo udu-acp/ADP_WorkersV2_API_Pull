@@ -24,8 +24,8 @@ load_dotenv()
 
 # Set token request body variables
 grant_type = 'client_credentials'
-client_id = os.getenv('EPOCHSL_CLIENT_ID')
-client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
+client_id = os.getenv('CLIENT_ID')
+client_secret = os.getenv("CLIENT_SECRET")
 
 
 # Set SSL Client Certificates
@@ -166,7 +166,7 @@ output = df.to_csv(index=False, encoding="utf-8")
 
 # connect to azure blob storage
 account_name = "epochmatillion"
-account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
+account_key = os.getenv("AZURE_ACCOUNT_KEY")
 container_name = "adp"
 blob_name = "APIs/WorkersV2.csv"
 account_url = "https://epochmatillion.blob.core.windows.net"
