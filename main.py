@@ -29,8 +29,8 @@ client_secret = os.getenv("CLIENT_SECRET")
 
 
 # Set SSL Client Certificates
-cert_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.pem"
-key_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.key"
+cert_path = os.getenv('PEM_PATH')
+key_path = os.getenv('KEY_PATH')
 
 # Set POST Headers
 content_type = 'application/x-www-form-urlencoded'
@@ -169,7 +169,7 @@ account_name = "epochmatillion"
 account_key = os.getenv("AZURE_ACCOUNT_KEY")
 container_name = "adp"
 blob_name = "APIs/WorkersV2.csv"
-account_url = "https://epochmatillion.blob.core.windows.net"
+account_url = os.getenv('AZURE_ACCOUNT_URL')
 
 
 # Create the BlobServiceClient objects, access contianer, blob, and then upload blob
