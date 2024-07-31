@@ -1,8 +1,15 @@
+# to call APIs
 import requests
+# to return response in json form
 import json
+# to grab environment variables
 import os
+# to convert lists into df
 import pandas as pd
+# to connect to blob store
 from azure.storage.blob import BlobServiceClient, ContentSettings
+# to pull in hidden variables in .env file
+from dotenv import load_dotenv
 
 # *keys: allows the function to accept any number of keys as separate args
 # eg. statuses.append(safe_get(work_assignment, "assignmentStatus", "statusCode", "longName"))
@@ -18,15 +25,18 @@ def safe_get(data, *keys, default=""):
     return data if data not in ({}, None) else default
 
 
+# pull in environment variables
+load_dotenv()
+
 # Set token request body variables
 grant_type = 'client_credentials'
-client_id = os.getenv('EPOCHSL_CLIENT_ID')
-client_secret = os.getenv("EPOCHSL_CLIENT_SECRET")
+client_id = os.getenv('CLIENT_ID')
+client_secret = os.getenv("CLIENT_SECRET")
 
 
 # Set SSL Client Certificates
-cert_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.pem"
-key_path = "C:/Users/JoshuaUdume/OpenSSL-Win64/bin/companyname_auth.key"
+cert_path = os.getenv('PEM_PATH')
+key_path = os.getenv('KEY_PATH')
 
 # Set POST Headers
 content_type = 'application/x-www-form-urlencoded'
@@ -92,10 +102,6 @@ for worker in data_dict:
         workerIDs.append(safe_get(worker, "workerID", "idValue"))
         originalhiredates.append(safe_get(worker, "workerDates", "originalHireDate"))
         termdates.append(safe_get(worker, "workerDates", "terminationDate"))
-        
-        # # assignments
-        # work_assignment = safe_get(worker, "workAssignments", default=[{}])
-        # print(work_assignment)
 
         # grab assignment specific data
         # grab assignment hire date (it will be original hire date, if they haven't switched assignments)
@@ -166,10 +172,10 @@ output = df.to_csv(index=False, encoding="utf-8")
 
 # connect to azure blob storage
 account_name = "epochmatillion"
-account_key = os.getenv("EPOCHSL_AZURE_ACCOUNT_KEY")
+account_key = os.getenv("AZURE_ACCOUNT_KEY")
 container_name = "adp"
 blob_name = "APIs/WorkersV2.csv"
-account_url = "https://epochmatillion.blob.core.windows.net"
+account_url = os.getenv('AZURE_ACCOUNT_URL')
 
 
 # Create the BlobServiceClient objects, access contianer, blob, and then upload blob
