@@ -1,1 +1,14 @@
-# In these files, you will find two snippets. One will be used to setup the token request to receive the bearer token. THe next one will involve using that bearer token to store api response and parse thorugh the json to grab certain elements. The elements will then be stored in a dataframe before being stored in azure as a blob csv utf-8 file. 
+# ADP WorkersV2 API Pull
+
+## In this repo, you will find a snippet that requests a bearer token from adp and then uses the token to pull all records available in the ADP WorkersV2 API.
+
+Ensure to add all environment variables to a .env file and include .env in your .gitignore file to keep it from being tracked. Below are the variables used in the snippet.
+
+```
+AZURE_ACCOUNT_KEY=
+AZURE_ACCOUNT_URL=
+CLIENT_ID=
+CLIENT_SECRET=
+PEM_PATH=
+KEY_PATH=
+```
