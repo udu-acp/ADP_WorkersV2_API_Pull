@@ -1,8 +1,14 @@
+# to call APIs
 import requests
+# to return response in json form
 import json
+# to grab environment variables
 import os
+# to convert lists into df
 import pandas as pd
+# to connect to blob store
 from azure.storage.blob import BlobServiceClient, ContentSettings
+# to pull in hidden variables in .env file
 from dotenv import load_dotenv
 
 # *keys: allows the function to accept any number of keys as separate args
