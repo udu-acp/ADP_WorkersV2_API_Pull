@@ -6,9 +6,10 @@ Ensure to add all environment variables to a .env file and include .env in your 
 
 ```
 AZURE_ACCOUNT_KEY=
+AZURE_ACCOUNT_NAME=
 AZURE_ACCOUNT_URL=
 CLIENT_ID=
 CLIENT_SECRET=
-PEM_PATH=
 KEY_PATH=
+PEM_PATH=
 ```
