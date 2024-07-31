@@ -171,7 +171,7 @@ output = df.to_csv(index=False, encoding="utf-8")
 # print(output)
 
 # connect to azure blob storage
-account_name = "epochmatillion"
+account_name = os.getenv("AZURE_ACCOUNT_NAME")
 account_key = os.getenv("AZURE_ACCOUNT_KEY")
 container_name = "adp"
 blob_name = "APIs/WorkersV2.csv"
